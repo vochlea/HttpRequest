@@ -2,17 +2,18 @@
 #include "httprequest_p.h"
 #include "networkcookiejar.h"
 
+#include <QNetworkCookie>
 #include <QTimer>
+#include <QVariant>
 #include <QtDebug>
 #include <QtQml>
-#include <QNetworkCookie>
-#include <QVariant>
 
-HttpRequest::HttpRequest(QObject *parent) :
+HttpRequest::HttpRequest(QObject* parent) :
     HttpRequest(Q_NULLPTR, parent)
-{ }
+{
+}
 
-HttpRequest::HttpRequest(QNetworkAccessManager *networkManager, QObject *parent):
+HttpRequest::HttpRequest(QNetworkAccessManager* networkManager, QObject* parent) :
     QObject(parent),
     d_ptr(new HttpRequestPrivate(networkManager, this))
 {
@@ -38,7 +39,8 @@ void HttpRequest::clear()
 
 void HttpRequest::setTimeout(qint32 time)
 {
-    if(this->getReadyState() != Loading ) {
+    if (this->getReadyState() != Loading)
+    {
         d_ptr->setTimeout(time);
     }
 }
@@ -48,14 +50,15 @@ int HttpRequest::getTimeout() const
     return d_ptr->getTimeout();
 }
 
-void HttpRequest::setRequestCookies(const QJsonObject &cookies)
+void HttpRequest::setRequestCookies(const QJsonObject& cookies)
 {
     QJsonObject::ConstIterator iter = cookies.begin();
     QJsonObject::ConstIterator end = cookies.end();
 
     QByteArray cookiesString = "";
 
-    while(iter != end) {
+    while (iter != end)
+    {
         QByteArray cookieName = iter.key().toUtf8();
         QByteArray cookieValue = iter.value().toString().toUtf8();
         QByteArray cookieString = cookieName + "=" + cookieValue + "; ";
@@ -66,21 +69,23 @@ void HttpRequest::setRequestCookies(const QJsonObject &cookies)
     this->setRequestHeader("Cookie", cookiesString);
 }
 
-void HttpRequest::setRequestHeader(const QJsonObject &headers)
+void HttpRequest::setRequestHeader(const QJsonObject& headers)
 {
     QJsonObject::ConstIterator iter = headers.begin();
     QJsonObject::ConstIterator end = headers.end();
 
-    while(iter != end) {
+    while (iter != end)
+    {
         this->setRequestHeader(iter.key().toUtf8(), iter.value().toString().toUtf8());
         iter++;
     }
 }
 
-void HttpRequest::setRequestHeader(const QByteArray &headerName, const QByteArray &value)
+void HttpRequest::setRequestHeader(const QByteArray& headerName, const QByteArray& value)
 {
-    if(d_ptr->getReadyState() == Loading) {
-        return ;
+    if (d_ptr->getReadyState() == Loading)
+    {
+        return;
     }
 
     QNetworkRequest request(d_ptr->getRequest());
@@ -88,12 +93,12 @@ void HttpRequest::setRequestHeader(const QByteArray &headerName, const QByteArra
     d_ptr->setRequest(request);
 }
 
-QString HttpRequest::getRequestHeader(const QString &headerName) const
+QString HttpRequest::getRequestHeader(const QString& headerName) const
 {
     return d_ptr->getRequest().rawHeader(headerName.toUtf8());
 }
 
-void HttpRequest::open(const QString &method, const QUrl &url, bool async)
+void HttpRequest::open(const QString& method, const QUrl& url, bool async)
 {
     Q_UNUSED(async)
 
@@ -105,30 +110,34 @@ void HttpRequest::open(const QString &method, const QUrl &url, bool async)
     Q_EMIT this->abort();
 }
 
-void HttpRequest::send(const QString &data)
+void HttpRequest::send(const QString& data)
 {
     QNetworkAccessManager* netManager = d_ptr->getManager();
-    if(netManager == Q_NULLPTR) {
+    if (netManager == Q_NULLPTR)
+    {
         qDebug() << "NetAccessManager is nullptr";
         Q_EMIT error();
         return;
     }
 
-    if(d_ptr->getReadyState() == Loading) {
-        return ;
+    if (d_ptr->getReadyState() == Loading)
+    {
+        return;
     }
     NetworkCookieJar* cookieJar = qobject_cast<NetworkCookieJar*>(d_ptr->getManager()->cookieJar());
-    if(cookieJar) {
-
+    if (cookieJar)
+    {
         QNetworkRequest request(d_ptr->getRequest());
-        auto cookies = cookieJar->getAllCookies();
-        QByteArray cookiesString;
-        foreach(auto cookie, cookies) {
+        auto            cookies = cookieJar->getAllCookies();
+        QByteArray      cookiesString;
+        foreach (auto cookie, cookies)
+        {
             cookiesString += cookie.toRawForm() + ";";
         }
-        if(!request.hasRawHeader("Cookie")) {
+        if (!request.hasRawHeader("Cookie"))
+        {
 #ifdef QT_DEBUG
-        qDebug() << "cookiesString" << cookiesString;
+            qDebug() << "cookiesString" << cookiesString;
 #endif
             request.setRawHeader("Cookie", cookiesString);
         }
@@ -137,49 +146,51 @@ void HttpRequest::send(const QString &data)
 
     QString methodName = d_ptr->getMethodName().toUpper();
 
-    if(methodName == "GET") {
+    if (methodName == "GET")
+    {
         QNetworkReply* reply = netManager->get(d_ptr->getRequest());
         d_ptr->setReply(reply);
-
-    } else if(methodName == "POST") {
+    }
+    else if (methodName == "POST")
+    {
         QNetworkReply* reply = netManager->post(d_ptr->getRequest(), data.toUtf8());
         d_ptr->setReply(reply);
-
-    } else if(methodName == "PUT") {
+    }
+    else if (methodName == "PUT")
+    {
         QNetworkReply* reply = netManager->put(d_ptr->getRequest(), data.toUtf8());
         d_ptr->setReply(reply);
-
-    } else if(methodName == "DELETE") {
+    }
+    else if (methodName == "DELETE")
+    {
         QNetworkReply* reply = netManager->deleteResource(d_ptr->getRequest());
         d_ptr->setReply(reply);
-
-    } else if(methodName == "HEAD") {
+    }
+    else if (methodName == "HEAD")
+    {
         QNetworkReply* reply = netManager->head(d_ptr->getRequest());
         d_ptr->setReply(reply);
-    } else {
+    }
+    else
+    {
         qDebug() << "Invaild method : " << methodName;
-        return ;
+        return;
     }
 
-    connect(d_ptr, &HttpRequestPrivate::finished,
-            this, &HttpRequest::finished);
+    connect(d_ptr, &HttpRequestPrivate::finished, this, &HttpRequest::finished);
 
-    connect(this, &HttpRequest::abort,
-            d_ptr->getReply(), &QNetworkReply::abort);
+    connect(this, &HttpRequest::abort, d_ptr->getReply(), &QNetworkReply::abort);
 
-    connect( d_ptr->getReply(), &QNetworkReply::downloadProgress,
-             this, &HttpRequest::downloadProgress);
+    connect(d_ptr->getReply(), &QNetworkReply::downloadProgress, this, &HttpRequest::downloadProgress);
 
-    connect( d_ptr->getReply(), &QNetworkReply::uploadProgress,
-             this, &HttpRequest::uploadProgress);
+    connect(d_ptr->getReply(), &QNetworkReply::uploadProgress, this, &HttpRequest::uploadProgress);
 
     const int usageNumber = d_ptr->increaseUsageCount();
 
-    if(d_ptr->getTimeout() > 0) {
-        QTimer::singleShot(d_ptr->getTimeout(), this, [=](){
-            if(d_ptr->getReply()
-                    && d_ptr->getReply()->isRunning()
-                    && usageNumber == d_ptr->getUsageCount())
+    if (d_ptr->getTimeout() > 0)
+    {
+        QTimer::singleShot(d_ptr->getTimeout(), this, [=]() {
+            if (d_ptr->getReply() && d_ptr->getReply()->isRunning() && usageNumber == d_ptr->getUsageCount())
             {
                 Q_EMIT this->abort();
                 Q_EMIT this->timeout();
@@ -217,9 +228,11 @@ HttpRequest::State HttpRequest::getReadyState() const
 QJsonArray HttpRequest::getAllResponseHeader() const
 {
     QList<QNetworkReply::RawHeaderPair> rawHeaderPairs = d_ptr->getRawHeaderPairs();
-    QJsonArray responseHeaders;
-    if(!rawHeaderPairs.isEmpty()) {
-        foreach(auto iter, rawHeaderPairs) {
+    QJsonArray                          responseHeaders;
+    if (!rawHeaderPairs.isEmpty())
+    {
+        foreach (auto iter, rawHeaderPairs)
+        {
             QJsonObject header;
             header[iter.first] = QString(iter.second);
             responseHeaders.push_back(QJsonValue(header));
@@ -228,14 +241,15 @@ QJsonArray HttpRequest::getAllResponseHeader() const
     return responseHeaders;
 }
 
-QNetworkAccessManager *HttpRequest::manager() const {
+QNetworkAccessManager* HttpRequest::manager() const
+{
     return d_ptr->getManager();
 }
 
-void HttpRequest::setManager(QNetworkAccessManager *manager) {
+void HttpRequest::setManager(QNetworkAccessManager* manager)
+{
     d_ptr->setManager(manager);
 }
-
 
 void HttpRequest::classBegin()
 {
@@ -246,25 +260,30 @@ void HttpRequest::componentComplete()
 {
     // qDebug() << Q_FUNC_INFO;
     QQmlContext* context = qmlContext(this);
-    if(context && context->engine() && context->engine()->networkAccessManager()) {
+    if (context && context->engine() && context->engine()->networkAccessManager())
+    {
         d_ptr->setManager(context->engine()->networkAccessManager());
-         qDebug() << "Set Net Access Manager Success";
+        qDebug() << "Set Net Access Manager Success";
     }
 }
 
-HttpRequestFactory::HttpRequestFactory(QObject *parent):
+HttpRequestFactory::HttpRequestFactory(QObject* parent) :
     QObject(parent)
-{}
+{
+}
 
-HttpRequest *HttpRequestFactory::create()
+HttpRequest* HttpRequestFactory::create()
 {
     qDebug() << Q_FUNC_INFO;
     HttpRequest* httpRequest = nullptr;
-    QQmlEngine* qmlEngine = qobject_cast<QQmlEngine *>(this->parent());
-    if(qmlEngine && qmlEngine->networkAccessManager()) {
+    QQmlEngine*  qmlEngine = qobject_cast<QQmlEngine*>(this->parent());
+    if (qmlEngine && qmlEngine->networkAccessManager())
+    {
         httpRequest = new HttpRequest(qmlEngine->networkAccessManager(),
                                       Q_NULLPTR);
-    } else {
+    }
+    else
+    {
         httpRequest = new HttpRequest();
     }
 
@@ -273,9 +292,8 @@ HttpRequest *HttpRequestFactory::create()
     return httpRequest;
 }
 
-QObject *HttpRequestFactory::singleton(QQmlEngine *engine, QJSEngine *jsEngine)
+QObject* HttpRequestFactory::singleton(QQmlEngine* engine, QJSEngine* jsEngine)
 {
     Q_UNUSED(jsEngine)
     return new HttpRequestFactory(engine);
 }
-
