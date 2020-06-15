@@ -63,7 +63,7 @@ void NetworkCookieJar::save()
         QTextStream writer(&file);
         foreach(auto cookie, cookies) {
             QString cookieString = cookie.toRawForm();
-            writer << cookieString << endl;
+            writer << cookieString << Qt::endl;
 #ifdef QT_DEBUG
             qDebug() <<"cookieString" << cookieString;
 #endif
